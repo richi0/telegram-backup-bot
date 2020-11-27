@@ -18,3 +18,8 @@
     - Are created on a specific date is older or younger than a specific date
 - Request files
     - The query respones contains previews and id's for every file. You can request the original files by sending a id or a list of ids to the bot.
+- Every message
+    - Every message will be connectet with a user. If a message arrives the database will be checked if the sender already exist.
+    - If not a new user will be created.
+    - If the usere ever loggs in successfully he will be marked as logged in.
+    - The user object will be send to every handler callback
