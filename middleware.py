@@ -1,8 +1,12 @@
+import uuid
+
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from settings import db_logging
-from models import User, Base
+from models import Base, User, File
 
 
 class Request:
@@ -33,3 +37,22 @@ class Request:
     def authorize_user(self):
         self.user.authorized = True
         self.session.commit()
+
+    def add_file(self, info, doc):
+        file = File(
+            creator_id=self.user.id,
+            file_name=info["file_name"],
+            unique_name=str(uuid.uuid4())+info["extension"],
+            extension=info["extension"],
+            size=int(info["size"])
+        )
+        self.session.add(file)
+        self.session.commit()
+
+        print(file.extension)
+        print(file.unique_name)
+        print(file.file_name)
+
+        with open(Path("data", file.unique_name), "wb") as fp:
+            doc.seek(0)
+            fp.write(doc.read())

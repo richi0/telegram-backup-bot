@@ -1,73 +1,105 @@
 import logging
+import io
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from pathlib import Path
+
 from telegram.ext import Updater
 from telegram.ext import CommandHandler
 from telegram.ext import MessageHandler, Filters
+from telegram import File
 
-from settings import token, password, db_logging
-from models import User, Base
-from middleware import Request
+from settings import token, password
+from commands import Command
 
 logging.basicConfig(format='%(asctime)s-%(name)s-%(levelname)s-%(message)s',
-                    level=logging.DEBUG)
+                    level=logging.WARNING)
 
-updater = Updater(token=token, use_context=True)
-dispatcher = updater.dispatcher
-
-
-def login(update, context):
-    request = Request(update)
-    submitted_pw = update.message.text.split(" ")[1]
-    if submitted_pw == password:
-        request.authorize_user()
-        context.bot.send_message(
-            chat_id=update.effective_chat.id, text="Login successful")
-    else:
-        context.bot.send_message(
-            chat_id=update.effective_chat.id, text="Login unsuccessful")
+logger = logging.getLogger('debug_print')
 
 
-def start(update, context):
-    print(update.message.text)
-    context.bot.send_message(
-        chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+class Start(Command):
+    def __init__(self, update, context):
+        super().__init__(update, context)
+        start_string = "\n".join(["/help {command}", "/login {password}", "/search {query}",
+                                  "/get {file_id}", "/start", "", "Send data to me and I will store it for you"])
+        self.answer(start_string)
 
 
-def echo(update, context):
-    request = Request(update)
-    print(request.user.authorized)
-    print()
-    context.bot.send_message(
-        chat_id=update.effective_chat.id, text=update.message.text)
+class Help(Command):
+    def __init__(self, update, context):
+        super().__init__(update, context)
+        self.check_args()
+        if self.check:
+            self.answer("Help")
+
+
+class Login(Command):
+    def __init__(self, update, context):
+        super().__init__(update, context)
+        self.check_args()
+        if self.check:
+            submitted_pw = self.arg
+            if submitted_pw == password:
+                self.request.authorize_user()
+                self.answer("Login successful")
+            else:
+                self.answer("Login unsuccessful")
+
+
+class Search(Command):
+    def __init__(self, update, context):
+        super().__init__(update, context)
+        self.check_args()
+        if self.check:
+            self.answer("Search")
+
+
+class Get(Command):
+    def __init__(self, update, context):
+        super().__init__(update, context)
+        self.check_args()
+        if self.check:
+            self.answer("Get")
+
+
+class Doc(Command):
+    def __init__(self, update, context):
+        super().__init__(update, context)
+        with io.BytesIO() as fp:
+            name = self.update.message.document.file_name
+            file_id = self.update.message.document.file_id
+            file_info = self.context.bot.get_file(file_id)
+            file_info.download(out=fp)
+            info = {"file_name": name,
+                    "extension": Path(name).suffix,
+                    "size": file_info.file_size}
+            self.request.add_file(info, fp)
+        self.answer("Your message contained a document")
 
 
 if __name__ == "__main__":
-    engine = create_engine('sqlite:///data.db', echo=db_logging)
-    Base.metadata.create_all(engine)
+    updater = Updater(token=token, use_context=True)
+    dispatcher = updater.dispatcher
 
-    # create a configured "Session" class
-    Session = sessionmaker(bind=engine)
-
-    # create a Session
-    session = Session()
-
-    ed_user = User(name='ed', telegram_id="12345678999")
-    session.add(ed_user)
-
-    session.commit()
-    our_user = session.query(User).all()
-    for i in our_user:
-        print(i)
-
-    start_handler = CommandHandler('start', start)
+    start_handler = CommandHandler('start', Start)
     dispatcher.add_handler(start_handler)
 
-    login_handler = CommandHandler('login', login)
+    help_handler = CommandHandler('help', Help)
+    dispatcher.add_handler(help_handler)
+
+    login_handler = CommandHandler('login', Login)
     dispatcher.add_handler(login_handler)
 
-    echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
-    dispatcher.add_handler(echo_handler)
+    search_handler = CommandHandler('search', Search)
+    dispatcher.add_handler(search_handler)
 
+    get_handler = CommandHandler('get', Get)
+    dispatcher.add_handler(get_handler)
+
+    filters = [Filters.photo, Filters.video, Filters.document]
+    for filter in filters:
+        handler = MessageHandler(filter, Doc)
+        dispatcher.add_handler(handler)
+
+    logger.warning("Bot is listening...")
     updater.start_polling()
