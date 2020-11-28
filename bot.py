@@ -1,13 +1,12 @@
 import logging
 import pprint
 import io
+import datetime
 
 from pathlib import Path
 
-from telegram.ext import Updater
-from telegram.ext import CommandHandler
-from telegram.ext import MessageHandler, Filters
-from telegram import File
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, File, Message, Chat
 
 from settings import token, password
 from commands import Command
@@ -24,7 +23,6 @@ class Start(Command):
         start_string = ("/help {command}\n"
                         "/login {password}\n"
                         "/search {query}\n"
-                        "/get {file_id}\n"
                         "/start\n\n"
                         "Send data to me and I will store it for you")
         self.answer(start_string)
@@ -54,17 +52,6 @@ class Help(Command):
                              ))
             elif "search" in arg:
                 self.answer(("Search command:\n"))
-            elif "get" in arg:
-                self.answer(("Get command:\n"
-                             "You have to send a file id or a list of file ids "
-                             "with the get command. To get a file id use the search "
-                             "command. \n\n"
-                             "Example 1: /get 123456\n"
-                             "The bot will send you the file 123456\n\n"
-                             "Example 2: /get [123456, 987654]\n"
-                             "The bot will send you the files 123456 and 987654\n\n"
-                             "You need to be logged in to use the get command."
-                             ))
             else:
                 self.answer(("Use one of the following arguments: "
                              "start, login, search, get."
@@ -87,17 +74,54 @@ class Login(Command):
 class Search(Command):
     def __init__(self, update, context):
         super().__init__(update, context)
-        self.check_args()
-        if self.check:
-            self.answer("Search")
+        self.search_args = []
+        self.arg_parse = True
+        if self.request.user.authorized:
+            self.get_search_args()
+            if self.arg_parse:
+                if self.search_args:
+                    self.answer("\n".join([i[0] + " " + i[1]
+                                           for i in self.search_args]) + "a")
+                else:
+                    files = self.request.get_all_files()
+                    keyboard = InlineKeyboardMarkup(
+                        [self.get_file_button(file) for file in files])
+                    print(files)
+                    self.context.bot.send_message(
+                        chat_id=self.update.effective_chat.id, text="Your search results", reply_markup=keyboard)
+            else:
+                self.answer(
+                    "There is a problem with your search query.\n\nRead /help search")
+        else:
+            self.answer(
+                "You need to be logged in to search files \n/login {password}")
 
+    def get_file_button(self, file):
+        button = InlineKeyboardButton(
+            file.file_name, callback_data=f"{file.id}")
+        return [button]
 
-class Get(Command):
-    def __init__(self, update, context):
-        super().__init__(update, context)
-        self.check_args()
-        if self.check:
-            self.answer("Get")
+    def get_search_args(self):
+        args = self.context.args
+        if "name" in args:
+            self.get_arg_and_param("name", args)
+        if "date" in args and self.arg_parse:
+            self.get_arg_and_param("date", args)
+        if "type" in args and self.arg_parse:
+            self.get_arg_and_param("type", args)
+        if "user" in args and self.arg_parse:
+            self.get_arg_and_param("user", args)
+        if "extension" in args and self.arg_parse:
+            self.get_arg_and_param("extension", args)
+
+    def get_arg_and_param(self, arg, args):
+        pos = args.index(arg)
+        try:
+            param = args[pos+1]
+            self.search_args.append((arg, param))
+        except Exception as e:
+            self.arg_parse = False
+            logger.warning(e)
 
 
 class Doc(Command):
@@ -136,8 +160,32 @@ class Doc(Command):
             self.answer(f"Your file ({info['file_name']}) was saved")
         else:
             self.answer(
-                "You have to login to upload files \n/login {password}")
+                "You need to be logged in to upload files \n/login {password}")
 
+
+class ButtonPressed(Command):
+    def __init__(self, update, context):
+        date = datetime.datetime.now()
+        chat = Chat(update._effective_chat.id, "private")
+        update.message = Message(0, date, chat)
+        super().__init__(update, context)
+        query = self.update.callback_query
+        query.answer()
+        self.data = query.data
+
+        file = self.request.return_file(self.data)
+        if file.file_type == "photo":
+            self.context.bot.send_photo(chat_id=self.update.effective_chat.id, photo=open(
+                f"./data/{file.unique_name}", "rb"))
+        elif file.file_type == "document":
+            self.context.bot.send_document(chat_id=self.update.effective_chat.id, document=open(
+                f"./data/{file.unique_name}", "rb"))
+        elif file.file_type == "video":
+            self.context.bot.send_video(chat_id=self.update.effective_chat.id, video=open(
+                f"./data/{file.unique_name}", "rb"))
+        elif file.file_type == "audio":
+            self.context.bot.send_audio(chat_id=self.update.effective_chat.id, audio=open(
+                f"./data/{file.unique_name}", "rb"))
 
 if __name__ == "__main__":
     updater = Updater(token=token, use_context=True)
@@ -155,13 +203,12 @@ if __name__ == "__main__":
     search_handler = CommandHandler('search', Search)
     dispatcher.add_handler(search_handler)
 
-    get_handler = CommandHandler('get', Get)
-    dispatcher.add_handler(get_handler)
-
     filters = [Filters.photo, Filters.video, Filters.audio, Filters.document]
     for filter in filters:
         handler = MessageHandler(filter, Doc)
         dispatcher.add_handler(handler)
+
+    updater.dispatcher.add_handler(CallbackQueryHandler(ButtonPressed))
 
     logger.warning("Bot is listening...")
     updater.start_polling()

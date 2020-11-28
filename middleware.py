@@ -53,3 +53,11 @@ class Request:
         with open(Path("data", file.unique_name), "wb") as fp:
             doc.seek(0)
             fp.write(doc.read())
+    
+    def get_all_files(self):
+        files = self.session.query(File).all()
+        return files
+    
+    def return_file(self, id):
+        file_data = self.session.query(File).filter_by(id=id).first()
+        return file_data
