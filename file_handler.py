@@ -26,11 +26,7 @@ class LocalHandler:
 
 class GoogleDriveHandler:
     def save(self, file_name, file):
-        with open(Path("data", file_name), "wb") as fp:
-            file.seek(0)
-            fp.write(file)
-            return True
+        pass
 
     def read(self, file_name):
-        with open(Path("data", file_name), "rb") as fp:
-            return fp.read()
+        pass
