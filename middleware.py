@@ -44,14 +44,11 @@ class Request:
             file_name=info["file_name"],
             unique_name=str(uuid.uuid4())+info["extension"],
             extension=info["extension"],
+            file_type=info["file_type"],
             size=int(info["size"])
         )
         self.session.add(file)
         self.session.commit()
-
-        print(file.extension)
-        print(file.unique_name)
-        print(file.file_name)
 
         with open(Path("data", file.unique_name), "wb") as fp:
             doc.seek(0)

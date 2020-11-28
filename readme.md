@@ -23,3 +23,17 @@
     - If not a new user will be created.
     - If the usere ever loggs in successfully he will be marked as logged in.
     - The user object will be send to every handler callback
+
+
+- search
+    - name
+    - date
+        - exact => 2020-03-03
+        - range => 2020-03-03/2020-05-01
+    - type
+        - video
+        - audio
+        - document
+        - photo
+    - user
+    - extension

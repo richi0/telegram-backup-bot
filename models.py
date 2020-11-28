@@ -27,6 +27,7 @@ class File(Base):
     unique_name = Column(String)
     saved = Column(String, default=date.today().strftime("%Y-%m-%d"))
     extension = Column(String)
+    file_type = Column(String)
     size = Column(Integer)
 
     creator = relationship("User", back_populates="files")
