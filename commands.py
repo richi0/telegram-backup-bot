@@ -1,4 +1,5 @@
 from middleware import Request
+from file_handler import FileHandler
 
 
 class Command:
@@ -7,6 +8,7 @@ class Command:
         self.context = context
         self.request = Request(update)
         self.check = True
+        self.file_handler = FileHandler()
 
     def check_args(self):
         if len(self.context.args) == 0:

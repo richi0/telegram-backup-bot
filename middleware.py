@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from settings import db_logging
 from models import Base, User, File
+from file_handler import FileHandler
 
 
 class Request:
@@ -18,6 +19,7 @@ class Request:
         self.Session = sessionmaker(bind=self.engine)
         self.session = self.Session()
         self.user = self.get_user()
+        self.file_handler = FileHandler()
 
     def get_user(self):
         user = self.session.query(User).filter_by(
@@ -50,9 +52,7 @@ class Request:
         self.session.add(file)
         self.session.commit()
 
-        with open(Path("data", file.unique_name), "wb") as fp:
-            doc.seek(0)
-            fp.write(doc.read())
+        self.file_handler.handler.save(file.unique_name, doc)
     
     def get_all_files(self):
         files = self.session.query(File).all()

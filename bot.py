@@ -84,11 +84,7 @@ class Search(Command):
                                            for i in self.search_args]) + "a")
                 else:
                     files = self.request.get_all_files()
-                    keyboard = InlineKeyboardMarkup(
-                        [self.get_file_button(file) for file in files])
-                    print(files)
-                    self.context.bot.send_message(
-                        chat_id=self.update.effective_chat.id, text="Your search results", reply_markup=keyboard)
+                    self.send_file_buttons(files)
             else:
                 self.answer(
                     "There is a problem with your search query.\n\nRead /help search")
@@ -96,9 +92,15 @@ class Search(Command):
             self.answer(
                 "You need to be logged in to search files \n/login {password}")
 
+    def send_file_buttons(self, files):
+        keyboard = InlineKeyboardMarkup(
+            [self.get_file_button(file) for file in files])
+        self.context.bot.send_message(
+            chat_id=self.update.effective_chat.id, text="Your search results", reply_markup=keyboard)
+
     def get_file_button(self, file):
         button = InlineKeyboardButton(
-            file.file_name, callback_data=f"{file.id}")
+            f"{file.file_name}\n ({file.saved})", callback_data=f"{file.id}")
         return [button]
 
     def get_search_args(self):
@@ -174,18 +176,20 @@ class ButtonPressed(Command):
         self.data = query.data
 
         file = self.request.return_file(self.data)
+        file_data = self.file_handler.handler.read(file.unique_name)
         if file.file_type == "photo":
-            self.context.bot.send_photo(chat_id=self.update.effective_chat.id, photo=open(
-                f"./data/{file.unique_name}", "rb"))
+            self.context.bot.send_photo(
+                chat_id=self.update.effective_chat.id, photo=file_data)
         elif file.file_type == "document":
-            self.context.bot.send_document(chat_id=self.update.effective_chat.id, document=open(
-                f"./data/{file.unique_name}", "rb"))
+            self.context.bot.send_document(
+                chat_id=self.update.effective_chat.id, document=file_data)
         elif file.file_type == "video":
-            self.context.bot.send_video(chat_id=self.update.effective_chat.id, video=open(
-                f"./data/{file.unique_name}", "rb"))
+            self.context.bot.send_video(
+                chat_id=self.update.effective_chat.id, video=file_data)
         elif file.file_type == "audio":
-            self.context.bot.send_audio(chat_id=self.update.effective_chat.id, audio=open(
-                f"./data/{file.unique_name}", "rb"))
+            self.context.bot.send_audio(
+                chat_id=self.update.effective_chat.id, audio=file_data)
+
 
 if __name__ == "__main__":
     updater = Updater(token=token, use_context=True)
