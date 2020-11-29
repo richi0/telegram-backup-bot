@@ -6,7 +6,7 @@ load_dotenv()
 
 bot_access_password = os.getenv("BOT_ACCESS_PASSWORD")
 telegram_api_token = os.getenv("TELEGRAM_API_TOKEN")
-storage_location = os.getenv("FILE_LOCATION", "local")
+storage_location = os.getenv("STORAGE_LOCATION", "local")
 db_logging = bool(int(os.getenv("DBLOGGING", 0)))
 dropbox_api_token = os.getenv("DROPBOX_API_TOKEN")
 

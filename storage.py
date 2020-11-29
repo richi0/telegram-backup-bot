@@ -1,3 +1,4 @@
+import io
 from pathlib import Path
 
 import dropbox
@@ -26,15 +27,16 @@ class LocalStorage:
     def read(self, file_name):
         return open(Path("data", file_name), "rb")
 
+
 class DropboxStorage:
     def __init__(self):
         self.dbx = dropbox.Dropbox(dropbox_api_token)
 
     def save(self, file_name, file):
-        return None
+        file.seek(0)
+        self.dbx.files_upload(file.read(), "/" + file_name)
+        return True
 
     def read(self, file_name):
-        return None
-
-if __name__ == "__main__":
-    handler = DropboxStorage()
+        meta_data, response = self.dbx.files_download("/" + file_name)
+        return io.BytesIO(response.content)
