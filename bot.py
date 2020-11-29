@@ -8,7 +8,7 @@ from pathlib import Path
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, File, Message, Chat
 
-from settings import token, password
+from settings import telegram_api_token, bot_access_password
 from commands import Command
 
 logging.basicConfig(format='%(asctime)s-%(name)s-%(levelname)s-%(message)s',
@@ -64,7 +64,7 @@ class Login(Command):
         self.check_args()
         if self.check:
             submitted_pw = self.arg
-            if submitted_pw == password:
+            if submitted_pw == bot_access_password:
                 self.request.authorize_user()
                 self.answer("Login successful")
             else:
@@ -176,7 +176,7 @@ class ButtonPressed(Command):
         self.data = query.data
 
         file = self.request.return_file(self.data)
-        file_data = self.file_handler.handler.read(file.unique_name)
+        file_data = self.storage_handler.storage.read(file.unique_name)
         if file.file_type == "photo":
             self.context.bot.send_photo(
                 chat_id=self.update.effective_chat.id, photo=file_data)
@@ -192,7 +192,7 @@ class ButtonPressed(Command):
 
 
 if __name__ == "__main__":
-    updater = Updater(token=token, use_context=True)
+    updater = Updater(token=telegram_api_token, use_context=True)
     dispatcher = updater.dispatcher
 
     start_handler = CommandHandler('start', Start)
