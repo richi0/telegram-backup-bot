@@ -1,3 +1,4 @@
+"""This module contains objects that represents a User or a File."""
 from datetime import date
 from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.ext.declarative import declarative_base
@@ -31,3 +32,6 @@ class File(Base):
     size = Column(Integer)
 
     creator = relationship("User", back_populates="files")
+
+    def __repr__(self):
+        return f"<File file_name={self.file_name} id={self.id}>"
