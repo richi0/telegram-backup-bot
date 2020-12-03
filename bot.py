@@ -1,8 +1,9 @@
+"""This module starts a telegram bot that can backup and return document, video, photo and audio data."""
+
 import logging
 import pprint
 import io
 import datetime
-
 from pathlib import Path
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
@@ -18,6 +19,8 @@ logger = logging.getLogger('debug_print')
 
 
 class Start(Command):
+    """Returns all usable commands of this bot. Is called when /start is sent to the bot."""
+
     def __init__(self, update, context):
         super().__init__(update, context)
         start_string = ("/help {command}\n"
@@ -29,6 +32,15 @@ class Start(Command):
 
 
 class Help(Command):
+    """Returns all help text to every possible command.
+
+    Example:
+        If the bot recives '/help start' it will return the help text for the
+        start command.
+
+     Is called when /help is sent to the bot.
+     """
+
     def __init__(self, update, context):
         super().__init__(update, context)
         self.check_args()
@@ -59,6 +71,16 @@ class Help(Command):
 
 
 class Login(Command):
+    """Returns success message if password was correct.
+
+    Infos:
+        The password recived as a argument to the /login command
+        is matched with the bot_access_password imported from
+        settings.py 
+
+     Is called when /login {password} is sent to the bot.
+     """
+
     def __init__(self, update, context):
         super().__init__(update, context)
         self.check_args()
@@ -72,6 +94,18 @@ class Login(Command):
 
 
 class Search(Command):
+    """Returns the result of the search query.
+
+    Info:
+        If the bot recives /search without argumets, 
+        infos to every file available will be returned.
+        The data returne will be displayed as buttons,
+        if you click the button the ButtonPressed class
+        is called.
+
+     Is called when /search {query} is sent to the bot.
+     """
+
     def __init__(self, update, context):
         super().__init__(update, context)
         self.search_args = []
@@ -93,17 +127,20 @@ class Search(Command):
                 "You need to be logged in to search files \n/login {password}")
 
     def send_file_buttons(self, files):
+        """Creates a InlineKeyboard with buttons to the files."""
         keyboard = InlineKeyboardMarkup(
             [self.get_file_button(file) for file in files])
         self.context.bot.send_message(
             chat_id=self.update.effective_chat.id, text="Your search results", reply_markup=keyboard)
 
     def get_file_button(self, file):
+        """Returns a button to a file. If clicked the ButtonPressed class is called"""
         button = InlineKeyboardButton(
             f"{file.file_name}\n ({file.saved})", callback_data=f"{file.id}")
         return [button]
 
     def get_search_args(self):
+        """Checks for all the possible search parameter in the query"""
         args = self.context.args
         if "name" in args:
             self.get_arg_and_param("name", args)
@@ -117,6 +154,7 @@ class Search(Command):
             self.get_arg_and_param("extension", args)
 
     def get_arg_and_param(self, arg, args):
+        """Adds the search parameter and value pair to the search_args list"""
         pos = args.index(arg)
         try:
             param = args[pos+1]
@@ -127,6 +165,16 @@ class Search(Command):
 
 
 class Doc(Command):
+    """Returns a success message if recived the file was saved successfully.
+
+    Info:
+        If the bot recives one of the supportet files
+        the file will be saved. Meta data of the file
+        are saved in the databse.
+
+     Is called when the bot recives a file of type: document, video, photo, audio.
+     """
+
     def __init__(self, update, context):
         super().__init__(update, context)
         if self.request.user.authorized:
@@ -166,6 +214,11 @@ class Doc(Command):
 
 
 class ButtonPressed(Command):
+    """Returns requested the file.
+
+     Is called when the a button sent as a search restult is clicked.
+     """
+
     def __init__(self, update, context):
         date = datetime.datetime.now()
         chat = Chat(update._effective_chat.id, "private")
@@ -192,6 +245,8 @@ class ButtonPressed(Command):
 
 
 if __name__ == "__main__":
+    # Set all the event handlers of the bot.
+
     updater = Updater(token=telegram_api_token, use_context=True)
     dispatcher = updater.dispatcher
 
